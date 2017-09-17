@@ -44,7 +44,7 @@ class Podio {
     if ($options && !empty($options['session_manager'])) {
       if (is_string($options['session_manager']) && class_exists($options['session_manager'])) {
         self::$session_manager = new $options['session_manager'];
-      } else if (is_object($options['session_manager']) && method_exists($options['session_manager'], 'get') && method_exists($options['session_manager'], 'set')) {
+      } else if (is_object($options['session_manager']) && method_exists($options['session_manager'], 'get') && method_exists($options['session_manager'], 'get')) {
         self::$session_manager = $options['session_manager'];
       }
       if (self::$session_manager) {
@@ -130,10 +130,10 @@ class Podio {
     }
   }
 
-  public static function authorize_url($redirect_uri,$scope) {
+  public static function authorize_url($redirect_uri) {
     $parsed_url = parse_url(self::$url);
     $host = str_replace('api.', '', $parsed_url['host']);
-    return 'https://'.$host.'/oauth/authorize?response_type=code&client_id='.self::$client_id.'&redirect_uri='.rawurlencode($redirect_uri).'&scope='.rawurlencode($scope);
+    return 'https://'.$host.'/oauth/authorize?response_type=code&client_id='.self::$client_id.'&redirect_uri='.rawurlencode($redirect_uri);
   }
 
   public static function is_authenticated() {
@@ -187,10 +187,11 @@ class Podio {
       case self::POST:
         curl_setopt(self::$ch, CURLOPT_CUSTOMREQUEST, self::POST);
         if (!empty($options['upload'])) {
+         $cfile = curl_file_create(substr($attributes[ "source" ], 1));
+        // Assign POST data
+         $attributes[ "source" ] = $cfile;
           curl_setopt(self::$ch, CURLOPT_POST, TRUE);
-          if(!class_exists("\CURLFile") && defined('CURLOPT_SAFE_UPLOAD')) {
-            curl_setopt(self::$ch, CURLOPT_SAFE_UPLOAD, FALSE);
-          }
+          curl_setopt(self::$ch, CURLOPT_SAFE_UPLOAD, TRUE);
           curl_setopt(self::$ch, CURLOPT_POSTFIELDS, $attributes);
           self::$headers['Content-type'] = 'multipart/form-data';
         }
@@ -404,14 +405,10 @@ class Podio {
     return $list;
   }
   public static function rate_limit_remaining() {
-    if (isset($last_response->headers['x-rate-limit-remaining'])) {
-      return self::$last_response->headers['x-rate-limit-remaining'];
-   }
+    return self::$last_response->headers['x-rate-limit-remaining'];
   }
   public static function rate_limit() {
-    if (isset($last_response->headers['x-rate-limit'])) {
-      return self::$last_response->headers['x-rate-limit'];
-   }
+    return self::$last_response->headers['x-rate-limit-limit'];
   }
 
   /**
