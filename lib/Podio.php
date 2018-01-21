@@ -278,7 +278,7 @@ class Podio {
       if(isset($response->headers['x-rate-limit-remaining'])) {
           $rateLimit = $response->headers['x-rate-limit-remaining'];
       }
-      \Log::info('URL: '.$url.'Method: '.$method.',Client Id: '.self::$client_id.',Auth JSON:'.json_encode(self::$oauth).',Rate Limit: '.$rateLimit);
+      \Log::info('URL: '.$url.' ,Method: '.$method.',Client Id: '.self::$client_id.',Auth JSON:'.json_encode(self::$oauth).',Rate Limit: '.$rateLimit);
 
       switch ($response->status) {
       case 200 :
