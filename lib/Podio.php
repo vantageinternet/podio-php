@@ -19,7 +19,7 @@ class Podio {
 
     // Setup curl
     self::$url = empty($options['api_url']) ? 'https://api.podio.com:443' : $options['api_url'];
-    self::$debug = self::$debug ? self::$debug : false;
+    self::$debug = self::$debug ? self::$debug : 'file';
     self::$ch = curl_init();
     self::$headers = array(
       'Accept' => 'application/json',
@@ -105,9 +105,9 @@ class Podio {
 
     $request_data = array_merge($data, array('client_id' => self::$client_id, 'client_secret' => self::$client_secret));
     if ($response = self::request(self::POST, '/oauth/token', $request_data, array('oauth_request' => true))) {
+        \Log::info('URL: '.'/oauth/token'.', Rate Limit: '.$response->headers['x-rate-limit-remaining']);
       $body = $response->json_body();
       self::$oauth = new PodioOAuth($body['access_token'], $body['refresh_token'], $body['expires_in'], $body['ref']);
-
       // Don't touch auth_type if we are refreshing automatically as it'll be reset to null
       if ($grant_type !== 'refresh_token') {
         self::$auth_type = $auth_type;
@@ -272,6 +272,7 @@ class Podio {
       $curl_info = curl_getinfo(self::$ch, CURLINFO_HEADER_OUT);
       self::log_request($method, $url, $encoded_attributes, $response, $curl_info);
     }
+	\Log::info('URL: '.$url.',Client Id: '.self::$client_id.',Auth JSON:'.json_encode(self::$oauth).',Rate Limit: '.$response->headers['x-rate-limit-remaining']);
 
     switch ($response->status) {
       case 200 :
