@@ -273,10 +273,14 @@ class Podio {
       $curl_info = curl_getinfo(self::$ch, CURLINFO_HEADER_OUT);
       self::log_request($method, $url, $encoded_attributes, $response, $curl_info);
     }
-	
-	\Log::info('URL: '.$url.', Rate Limit: '.$response->headers['x-rate-limit-remaining']);
 
-    switch ($response->status) {
+      $rateLimit = 'NAN';
+      if(isset($response->headers['x-rate-limit-remaining'])) {
+          $rateLimit = $response->headers['x-rate-limit-remaining'];
+      }
+      \Log::info('URL: '.$url.'Method: '.$method.',Client Id: '.self::$client_id.',Auth JSON:'.json_encode(self::$oauth).',Rate Limit: '.$rateLimit);
+
+      switch ($response->status) {
       case 200 :
       case 201 :
       case 204 :
