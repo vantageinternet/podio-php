@@ -272,7 +272,7 @@ class Podio {
       $curl_info = curl_getinfo(self::$ch, CURLINFO_HEADER_OUT);
       self::log_request($method, $url, $encoded_attributes, $response, $curl_info);
     }
-$rateLimit = 'NAN'
+$rateLimit = 'NAN';
  if(isset($response->headers['x-rate-limit-remaining']) {
   $rateLimit = $response->headers['x-rate-limit-remaining'];
  }
