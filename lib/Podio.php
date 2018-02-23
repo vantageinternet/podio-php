@@ -105,10 +105,11 @@ class Podio {
 
     $request_data = array_merge($data, array('client_id' => self::$client_id, 'client_secret' => self::$client_secret));
     if ($response = self::request(self::POST, '/oauth/token', $request_data, array('oauth_request' => true))) {
-		\Log::info('URL: '.'/oauth/token'.', Rate Limit: '.$response->headers['x-rate-limit-remaining']);
+        \Log::info('URL: '.'/oauth/token'.', Rate Limit: '.$response->headers['x-rate-limit-remaining']);
       $body = $response->json_body();
-      self::$oauth = new PodioOAuth($body['access_token'], $body['refresh_token'], $body['expires_in'], $body['ref']);
 
+      self::$oauth = new PodioOAuth($body['access_token'], $body['refresh_token'], $body['expires_in'], $body['ref'],self::$oauth->user_id);
+      \App\Helpers\CommonHelper::updateAuthTokens(self::$client_id,self::$oauth);
       // Don't touch auth_type if we are refreshing automatically as it'll be reset to null
       if ($grant_type !== 'refresh_token') {
         self::$auth_type = $auth_type;
@@ -117,7 +118,6 @@ class Podio {
       if (self::$session_manager) {
         self::$session_manager->set(self::$oauth, self::$auth_type);
       }
-
       return true;
     }
     return false;
@@ -338,7 +338,12 @@ class Podio {
         throw new PodioGoneError($response->body, $response->status, $url);
         break;
       case 420 :
-        throw new PodioRateLimitError($response->body, $response->status, $url);
+        \Illuminate\Support\Facades\Log::info('Rate Limit Error::');
+        $flag = \App\Helpers\CommonHelper::switchPodioClient(self::$client_id,self::$oauth->user_id);
+        if($flag) {
+          return self::request($method, $original_url, $attributes);
+        }else
+          throw new PodioRateLimitError($response->body, $response->status, $url);
         break;
       case 500 :
         throw new PodioServerError($response->body, $response->status, $url);
