@@ -19,7 +19,7 @@ class Podio {
 
     // Setup curl
     self::$url = empty($options['api_url']) ? 'https://api.podio.com:443' : $options['api_url'];
-    self::$debug = self::$debug ? self::$debug : 'file';
+    self::$debug = self::$debug ? self::$debug : false;
     self::$ch = curl_init();
     self::$headers = array(
       'Accept' => 'application/json',
@@ -107,7 +107,9 @@ class Podio {
     if ($response = self::request(self::POST, '/oauth/token', $request_data, array('oauth_request' => true))) {
         \Log::info('URL: '.'/oauth/token'.', Rate Limit: '.$response->headers['x-rate-limit-remaining']);
       $body = $response->json_body();
-      self::$oauth = new PodioOAuth($body['access_token'], $body['refresh_token'], $body['expires_in'], $body['ref']);
+
+      self::$oauth = new PodioOAuth($body['access_token'], $body['refresh_token'], $body['expires_in'], $body['ref'],self::$oauth->user_id);
+      \App\Helpers\CommonHelper::updateAuthTokens(self::$client_id,self::$oauth);
       // Don't touch auth_type if we are refreshing automatically as it'll be reset to null
       if ($grant_type !== 'refresh_token') {
         self::$auth_type = $auth_type;
@@ -116,7 +118,6 @@ class Podio {
       if (self::$session_manager) {
         self::$session_manager->set(self::$oauth, self::$auth_type);
       }
-
       return true;
     }
     return false;
@@ -272,12 +273,14 @@ class Podio {
       $curl_info = curl_getinfo(self::$ch, CURLINFO_HEADER_OUT);
       self::log_request($method, $url, $encoded_attributes, $response, $curl_info);
     }
-$rateLimit = 'NAN';
- if(isset($response->headers['x-rate-limit-remaining'])) {
-  $rateLimit = $response->headers['x-rate-limit-remaining'];
- }
- \Log::info('URL: '.$url.',Client Id: '.self::$client_id.',Auth JSON:'.json_encode(self::$oauth).',Rate Limit: '.$rateLimit);
-    switch ($response->status) {
+
+      $rateLimit = 'NAN';
+      if(isset($response->headers['x-rate-limit-remaining'])) {
+          $rateLimit = $response->headers['x-rate-limit-remaining'];
+      }
+      \Log::info('URL: '.$url.' ,Method: '.$method.',Client Id: '.self::$client_id.',Auth JSON:'.json_encode(self::$oauth).',Rate Limit: '.$rateLimit);
+
+      switch ($response->status) {
       case 200 :
       case 201 :
       case 204 :
@@ -335,7 +338,12 @@ $rateLimit = 'NAN';
         throw new PodioGoneError($response->body, $response->status, $url);
         break;
       case 420 :
-        throw new PodioRateLimitError($response->body, $response->status, $url);
+        \Illuminate\Support\Facades\Log::info('Rate Limit Error::');
+        $flag = \App\Helpers\CommonHelper::switchPodioClient(self::$client_id,self::$oauth->user_id);
+        if($flag) {
+          return self::request($method, $original_url, $attributes);
+        }else
+          throw new PodioRateLimitError($response->body, $response->status, $url);
         break;
       case 500 :
         throw new PodioServerError($response->body, $response->status, $url);
