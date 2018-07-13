@@ -196,8 +196,13 @@ class PodioObject {
 
   public static function member($response) {
     if ($response) {
-      $class_name = get_called_class();
-      return new $class_name(array_merge($response->json_body(), array('__api_values' => true)));
+      try{
+          $class_name = get_called_class();
+          return new $class_name(array_merge($response->json_body(), array('__api_values' => true)));
+      } catch (Exception $e){
+          \Log::info('exception ' . $e->getMessage() . ' response ' . json_encode($response) );
+          throw $e;
+      }
     }
   }
 
