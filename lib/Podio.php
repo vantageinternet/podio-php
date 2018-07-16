@@ -160,6 +160,8 @@ class Podio {
       throw new PodioDataIntegrityError('Attributes must be an array');
     }
 
+    \Log::info('Request URL: '.$url.' ,Method: '.$method.',Client Id: '.self::$client_id.',Auth JSON:'.json_encode(self::$oauth));
+
     switch ($method) {
       case self::GET:
         curl_setopt(self::$ch, CURLOPT_CUSTOMREQUEST, self::GET);
